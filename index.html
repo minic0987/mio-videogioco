@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ChronoShift - Il Tempo Inverso</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            margin: 0;
+            background-color: #060911;
+            color: #c9d1d9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+        .header {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 12px;
+        }
+        .title-group {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+        }
+        h1 {
+            margin: 0;
+            font-size: clamp(18px, 4vw, 24px);
+            color: #00f3ff;
+            letter-spacing: 3px;
+            text-shadow: 0 0 12px rgba(0, 243, 255, 0.6);
+        }
+        .level-badge {
+            background: rgba(213, 0, 249, 0.15);
+            border: 1px solid #d500f9;
+            color: #e040fb;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+        .controls-pc {
+            font-size: 12px;
+            color: #8b949e;
+            text-align: center;
+            margin-bottom: 6px;
+        }
+        .key {
+            background: #131a29;
+            border: 1px solid #293855;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #f0f6fc;
+            font-weight: bold;
+        }
+        .btn-icon {
+            background: #131a29;
+            border: 1px solid #00f3ff;
+            color: #00f3ff;
+            border-radius: 6px;
+            padding: 5px 10px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(0, 243, 255, 0.2);
+            margin-left: 4px;
+        }
+        .btn-icon:active {
+            background: #00f3ff;
+            color: #060911;
+        }
+        .game-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0 8px;
+        }
+        canvas {
+            width: 100%;
+            height: auto;
+            max-height: 62vh;
+            aspect-ratio: 800 / 500;
+            border: 2px solid #293855;
+            background-color: #090d16;
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.15);
+            border-radius: 8px;
+            display: block;
+        }
+        /* Controlli Touch Mobile */
+        .mobile-controls {
+            display: none;
+            width: 100%;
+            max-width: 800px;
+            padding: 12px 20px;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+            margin-bottom: 10px;
+        }
+        .joystick-zone {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: rgba(19, 26, 41, 0.6);
+            border: 2px solid rgba(0, 243, 255, 0.3);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .joystick-knob {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #00f3ff, #0077ff);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.6);
+            position: absolute;
+            pointer-events: none;
+        }
+        .action-pad {
+            display: grid;
+            grid-template-columns: repeat(2, 68px);
+            grid-gap: 10px;
+        }
+        .touch-btn {
+            width: 68px;
+            height: 54px;
+            border-radius: 12px;
+            border: 1.5px solid;
+            background: rgba(19, 26, 41, 0.85);
+            color: #fff;
+            font-weight: bold;
+            font-size: 11px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+        }
+        .touch-btn:active, .touch-btn.active {
+            transform: scale(0.92);
+        }
+        .btn-dash { border-color: #00f3ff; color: #00f3ff; }
+        .btn-dash:active { background: rgba(0, 243, 255, 0.25); }
+        
+        .btn-clone { border-color: #d500f9; color: #d500f9; }
+        .btn-clone:active { background: rgba(213, 0, 249, 0.25); }
+        
+        .btn-rewind { border-color: #b388ff; color: #b388ff; grid-column: span 2; width: 100%; }
+        .btn-rewind:active, .btn-rewind.active { background: rgba(179, 136, 255, 0.3); }
+
+        @media (pointer: coarse), (max-width: 768px) {
+            .controls-pc { display: none; }
+            .mobile-controls { display: flex; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title-group">
+            <h1>CHRONOSHIFT</h1>
+            <span class="level-badge" id="levelBadge">LIVELLO 1/5</span>
+        </div>
+        <div>
+            <button class="btn-icon" id="btnResetTop">↻ RESET</button>
+            <button class="btn-icon" id="btnAudio">🔊 AUDIO</button>
+        </div>
+    </div>
+
+    <div class="controls-pc">
+        Muoviti: <span class="key">WASD</span> / <span class="key">Frecce</span> | 
+        Scatto: <span class="key">SHIFT</span> | 
+        Riavvolgi (Tieni): <span class="key">SPAZIO</span> | 
+        Clone: <span class="key">C</span> | 
+        Reset: <span class="key">R</span>
+    </div>
+
+    <div class="game-wrapper">
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+    </div>
+
+    <!-- Controlli Touch Smartphone/Tablet -->
+    <div class="mobile-controls">
+        <div class="joystick-zone" id="joystickZone">
+            <div class="joystick-knob" id="joystickKnob"></div>
+        </div>
+        <div class="action-pad">
+            <button class="touch-btn btn-dash" id="btnTouchDash">⚡<br>SCATTO</button>
+            <button class="touch-btn btn-clone" id="btnTouchClone">👥<br>CLONE</button>
+            <button class="touch-btn btn-rewind" id="btnTouchRewind">◄◄ TIENI PER RIAVVOLGERE</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const levelBadge = document.getElementById('levelBadge');
+
+        // ==========================================
+        // 1. MOTORE AUDIO SINTETIZZATO (WEB AUDIO)
+        // ==========================================
+        const AudioEngine = {
+            ctx: null,
+            muted: false,
+            rewindTimer: 0,
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+            },
+
+            playTone(freqStart, freqEnd, duration, type = 'sine', volume = 0.15) {
+                if (this.muted) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freqStart, this.ctx.currentTime);
+                if (freqEnd) osc.frequency.exponentialRampToValueAtTime(freqEnd, this.ctx.currentTime + duration);
+                gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            },
+
+            dash() { this.playTone(650, 140, 0.18, 'sawtooth', 0.14); },
+            clone() {
+                this.playTone(220, 880, 0.35, 'triangle', 0.2);
+                setTimeout(() => this.playTone(440, 1100, 0.25, 'sine', 0.15), 80);
+            },
+            doorOpen() { this.playTone(300, 600, 0.25, 'sine', 0.18); },
+            hitLaser() { this.playTone(150, 55, 0.3, 'sawtooth', 0.22); },
+            rewindTick() {
+                this.rewindTimer++;
+                if (this.rewindTimer % 5 === 0) {
+                    this.playTone(500 + Math.random() * 200, 250, 0.08, 'triangle', 0.08);
+                }
+            },
+            win() {
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((n, idx) => {
+                    setTimeout(() => this.playTone(n, n * 1.02, 0.3, 'triangle', 0.18), idx * 100);
+                });
+            }
+        };
+
+        // ==========================================
+        // 2. DEFINIZIONE DEI 5 LIVELLI
+        // ==========================================
+        const LEVELS = [
+            {
+                name: "1. L'ECO TEMPORALE",
+                hint: "Premi sul pulsante rosso, poi crea un CLONE (C) per tenere aperta la porta.",
+                start: { x: 80, y: 235 },
+                goal: { x: 700, y: 225, size: 48 },
+                buttons: [{ x: 350, y: 100, size: 40, pressed: false }],
+                door: { x: 550, y: 180, w: 22, h: 140, open: false },
+                walls: [
+                    { x: 550, y: 20, w: 22, h: 160 },
+                    { x: 550, y: 320, w: 22, h: 160 }
+                ],
+                lasers: []
+            },
+            {
+                name: "2. DOPPIA SERRATURA",
+                hint: "Servono ENTRAMBI i pulsanti attivi contemporaneamente per aprire il varco!",
+                start: { x: 70, y: 235 },
+                goal: { x: 710, y: 225, size: 48 },
+                buttons: [
+                    { x: 280, y: 80, size: 38, pressed: false },
+                    { x: 280, y: 380, size: 38, pressed: false }
+                ],
+                door: { x: 560, y: 190, w: 22, h: 120, open: false },
+                walls: [
+                    { x: 560, y: 20, w: 22, h: 170 },
+                    { x: 560, y: 310, w: 22, h: 170 },
+                    { x: 220, y: 210, w: 160, h: 80 }
+                ],
+                lasers: []
+            },
+            {
+                name: "3. RAGGI CICLICI",
+                hint: "I laser si spengono a intervalli. Se vieni colpito, riavvolgi il tempo!",
+                start: { x: 70, y: 235 },
+                goal: { x: 710, y: 225, size: 48 },
+                buttons: [{ x: 430, y: 70, size: 38, pressed: false }],
+                door: { x: 600, y: 180, w: 22, h: 140, open: false },
+                walls: [
+                    { x: 600, y: 20, w: 22, h: 160 },
+                    { x: 600, y: 320, w: 22, h: 160 }
+                ],
+                lasers: [
+                    { x: 250, y: 20, w: 12, h: 460, period: 140, activeTime: 70, offset: 0 },
+                    { x: 440, y: 150, w: 12, h: 330, period: 140, activeTime: 70, offset: 70 }
+                ]
+            },
+            {
+                name: "4. IL CORRIDOIO INVERSO",
+                hint: "Usa lo SCATTO (SHIFT) per risparmiare secondi preziosi nella memoria temporale.",
+                start: { x: 60, y: 60 },
+                goal: { x: 710, y: 400, size: 48 },
+                buttons: [{ x: 680, y: 65, size: 38, pressed: false }],
+                door: { x: 580, y: 340, w: 22, h: 140, open: false },
+                walls: [
+                    { x: 160, y: 20, w: 24, h: 340 },
+                    { x: 340, y: 140, w: 24, h: 340 },
+                    { x: 580, y: 20, w: 22, h: 320 }
+                ],
+                lasers: [
+                    { x: 184, y: 240, w: 156, h: 10, period: 120, activeTime: 55, offset: 20 }
+                ]
+            },
+            {
+                name: "5. IL PARADOSSO FINALE",
+                hint: "Coordina Clone, Doppio Pulsante e Laser sincronizzati. Dimostra chi comanda il tempo!",
+                start: { x: 60, y: 235 },
+                goal: { x: 715, y: 225, size: 46 },
+                buttons: [
+                    { x: 390, y: 65, size: 36, pressed: false },
+                    { x: 390, y: 395, size: 36, pressed: false }
+                ],
+                door: { x: 620, y: 190, w: 22, h: 120, open: false },
+                walls: [
+                    { x: 620, y: 20, w: 22, h: 170 },
+                    { x: 620, y: 310, w: 22, h: 170 },
+                    { x: 200, y: 180, w: 24, h: 140 }
+                ],
+                lasers: [
+                    { x: 310, y: 20, w: 10, h: 210, period: 130, activeTime: 65, offset: 0 },
+                    { x: 310, y: 270, w: 10, h: 210, period: 130, activeTime: 65, offset: 65 },
+                    { x: 510, y: 20, w: 10, h: 460, period: 150, activeTime: 65, offset: 30 }
+                ]
+            }
+        ];
+
+        const borderWalls = [
+            { x: 0, y: 0, w: 800, h: 20 },
+            { x: 0, y: 480, w: 800, h: 20 },
+            { x: 0, y: 0, w: 20, h: 500 },
+            { x: 780, y: 0, w: 20, h: 500 }
+        ];
+
+        // ==========================================
+        // 3. STATO DEL GIOCO
+        // ==========================================
+        let currentLevelIdx = 0;
+        let levelData = null;
+
+        const keys = {};
+        let touchInput = { x: 0, y: 0, rewind: false };
+        let history = [];
+        let cloneHistory = [];
+        let cloneFrame = 0;
+        let isRewinding = false;
+        let levelCompleted = false;
+        let campaignCompleted = false;
+        let timeTick = 0;
+        let worldFrame = 0; // Orologio deterministico per laser (si riavvolge con Spazio!)
+
+        let particles = [];
+        let dashGhosts = [];
+        let shockwaves = [];
+        let screenShake = 0;
+
+        const player = {
+            x: 80, y: 230, vx: 0, vy: 0,
+            size: 26, accel: 0.85, friction: 0.82, maxSpeed: 5.2,
+            dirX: 1, dirY: 0, dashCooldown: 0, isDashing: 0,
+            color: '#00f3ff'
+        };
+
+        function loadLevel(idx) {
+            currentLevelIdx = idx;
+            const template = LEVELS[idx];
+            // Clona profondamente i dati del livello
+            levelData = {
+                name: template.name,
+                hint: template.hint,
+                start: { ...template.start },
+                goal: { ...template.goal },
+                buttons: template.buttons.map(b => ({ ...b, pressed: false })),
+                door: { ...template.door, open: false },
+                walls: [...borderWalls, ...template.walls.map(w => ({ ...w }))],
+                lasers: template.lasers.map(l => ({ ...l, active: false }))
+            };
+
+            levelBadge.textContent = LIVELLO ${idx + 1}/${LEVELS.length};
+            resetLevelState(false);
+        }
+
+        function resetLevelState(playSound = true) {
+            if (playSound) AudioEngine.playTone(300, 150, 0.15, 'sine', 0.1);
+            player.x = levelData.start.x;
+            player.y = levelData.start.y;
+            player.vx = 0;
+            player.vy = 0;
+            player.dashCooldown = 0;
+            history = [];
+            cloneHistory = [];
+            cloneFrame = 0;
+            worldFrame = 0;
+            particles = [];
+            dashGhosts = [];
+            shockwaves = [];
+            levelCompleted = false;
+            campaignCompleted = false;
+        }
+
+        function addShake(amount) { screenShake = Math.max(screenShake, amount); }
+
+        function spawnShockwave(x, y, color, maxRadius = 90) {
+            shockwaves.push({ x, y, radius: 5, maxRadius, alpha: 0.9, color });
+        }
+
+        function spawnParticles(x, y, color, count = 12, speed = 3) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const velocity = Math.random() * speed + 0.5;
+                particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * velocity,
+                    vy: Math.sin(angle) * velocity,
+                    life: 1.0,
+                    decay: Math.random() * 0.03 + 0.02,
+                    color,
+                    size: Math.random() * 3 + 1.5
+                });
+            }
+        }
+
+        // ==========================================
+        // 4. AZIONI E CONTROLLI
+        // ==========================================
+        function triggerDash() {
+            if (player.dashCooldown > 0 || isRewinding || levelCompleted) return;
+            AudioEngine.dash();
+            addShake(5);
+            player.isDashing = 8;
+            player.dashCooldown = 45;
+            const dashPower = 14;
+            const len = Math.hypot(player.dirX, player.dirY) || 1;
+            player.vx = (player.dirX / len) * dashPower;
+            player.vy = (player.dirY / len) * dashPower;
+
+            spawnParticles(player.x + player.size / 2, player.y + player.size / 2, '#00f3ff', 15, 4);
+            spawnShockwave(player.x + player.size / 2, player.y + player.size / 2, '#00f3ff', 55);
+        }
+
+        function triggerClone() {
+            if (history.length <= 10 || levelCompleted) return;
+            AudioEngine.clone();
+            addShake(8);
+            const cx = player.x + player.size / 2;
+            const cy = player.y + player.size / 2;
+            spawnParticles(cx, cy, '#d500f9', 28, 4.5);
+            spawnShockwave(cx, cy, '#d500f9', 110);
+
+            cloneHistory = [...history];
+            cloneFrame = 0;
+            history = [];
+            worldFrame = 0; // Riallinea i laser all'inizio del ciclo del clone
+            player.x = levelData.start.x;
+            player.y = levelData.start.y;
+            player.vx = 0;
+            player.vy = 0;
+
+            spawnParticles(player.x + player.size / 2, player.y + player.size / 2, '#00f3ff', 25, 4);
+            spawnShockwave(player.x + player.size / 2, player.y + player.size / 2, '#00f3ff', 80);
+        }
+
+        function nextActionOnWin() {
+            if (campaignCompleted) {
+                loadLevel(0);
+            } else if (levelCompleted) {
+                if (currentLevelIdx + 1 < LEVELS.length) {
+                    loadLevel(currentLevelIdx + 1);
+                }
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            AudioEngine.init();
+            keys[e.code] = true;
+            if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') triggerDash();
+            if (e.code === 'KeyC') triggerClone();
+            if (e.code === 'KeyR') resetLevelState(true);
+            if ((e.code === 'Enter' || e.code === 'Space') && (levelCompleted || campaignCompleted)) {
+                nextActionOnWin();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+        // Click o Tap sul canvas per passare al livello successivo quando vinci
+        canvas.addEventListener('pointerdown', () => {
+            AudioEngine.init();
+            if (levelCompleted || campaignCompleted) nextActionOnWin();
+        });
+
+        document.getElementById('btnResetTop').addEventListener('click', () => resetLevelState(true));
+        const btnAudio = document.getElementById('btnAudio');
+        btnAudio.addEventListener('click', () => {
+            AudioEngine.muted = !AudioEngine.muted;
+            btnAudio.textContent = AudioEngine.muted ? '🔇 MUTO' : '🔊 AUDIO';
+        });
+
+        // Joystick Touch
+        const joyZone = document.getElementById('joystickZone');
+        const joyKnob = document.getElementById('joystickKnob');
+        let joyTouchId = null;
+
+        joyZone.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            AudioEngine.init();
+            const touch = e.changedTouches[0];
+            joyTouchId = touch.identifier;
+            updateJoystick(touch);
+        });
+        joyZone.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            for (let t of e.changedTouches) {
+                if (t.identifier === joyTouchId) updateJoystick(t);
+            }
+        });
+        const endJoystick = (e) => {
+            for (let t of e.changedTouches) {
+                if (t.identifier === joyTouchId) {
+                    joyTouchId = null;
+                    touchInput.x = 0;
+                    touchInput.y = 0;
+                    joyKnob.style.transform = translate(0px, 0px);
+                }
+            }
+        };
+        joyZone.addEventListener('touchend', endJoystick);
+        joyZone.addEventListener('touchcancel', endJoystick);
+
+        function updateJoystick(touch) {
+            const rect = joyZone.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const maxDist = rect.width / 2 - 20;
+            let dx = touch.clientX - centerX;
+            let dy = touch.clientY - centerY;
+            const dist = Math.hypot(dx, dy);
+            if (dist > maxDist) {
+                dx = (dx / dist) * maxDist;
+                dy = (dy / dist) * maxDist;
+            }
+            joyKnob.style.transform = translate(${dx}px, ${dy}px);
+            touchInput.x = dx / maxDist;
+            touchInput.y = dy / maxDist;
+        }
+
+        document.getElementById('btnTouchDash').addEventListener('touchstart', (e) => {
+            e.preventDefault(); AudioEngine.init(); triggerDash();
+        });
+        document.getElementById('btnTouchClone').addEventListener('touchstart', (e) => {
+            e.preventDefault(); AudioEngine.init(); triggerClone();
+        });
+        const btnRewind = document.getElementById('btnTouchRewind');
+        btnRewind.addEventListener('touchstart', (e) => {
+            e.preventDefault(); AudioEngine.init(); touchInput.rewind = true; btnRewind.classList.add('active');
+        });
+        const stopRewindTouch = (e) => {
+            e.preventDefault(); touchInput.rewind = false; btnRewind.classList.remove('active');
+        };
+        btnRewind.addEventListener('touchend', stopRewindTouch);
+        btnRewind.addEventListener('touchcancel', stopRewindTouch);
+
+        // ==========================================
+        // 5. LOGICA E FISICA
+        // ==========================================
+        function checkCollision(rect1, rect2) {
+            return (
+                rect1.x < rect2.x + rect2.w &&
+                rect1.x + rect1.size > rect2.x &&
+                rect1.y < rect2.y + rect2.h &&
+                rect1.y + rect1.size > rect2.y
+            );
+        }
+
+        function isBlocked(x, y) {
+            const hitbox = { x, y, size: player.size };
+            for (let w of levelData.walls) {
+                if (checkCollision(hitbox, w)) return true;
+            }
+            const d = levelData.door;
+            if (!d.open && checkCollision(hitbox, { x: d.x, y: d.y, w: d.w, h: d.h })) return true;
+            return false;
+        }
+
+        function updateLasersState() {
+            for (let l of levelData.lasers) {
+                const cycle = (worldFrame + l.offset) % l.period;
+                l.active = cycle < l.activeTime;
+            }
+        }
+
+        function update() {
+            timeTick += 0.05;
+            if (screenShake > 0) screenShake *= 0.85;
+            if (screenShake < 0.2) screenShake = 0;
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx; p.y += p.vy; p.life -= p.decay;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+            for (let i = dashGhosts.length - 1; i >= 0; i--) {
+                dashGhosts[i].alpha -= 0.08;
+                if (dashGhosts[i].alpha <= 0) dashGhosts.splice(i, 1);
+            }
+            for (let i = shockwaves.length - 1; i >= 0; i--) {
+                let s = shockwaves[i];
+                s.radius += (s.maxRadius - s.radius) * 0.15;
+                s.alpha -= 0.04;
+                if (s.alpha <= 0) shockwaves.splice(i, 1);
+            }
+
+            if (levelCompleted || campaignCompleted) return;
+
+            // 1. RIAVVOLGIMENTO TEMPORALE
+            if ((keys['Space'] || touchInput.rewind) && history.length > 0) {
+                isRewinding = true;
+                AudioEngine.rewindTick();
+                const pastState = history.pop();
+                player.x = pastState.x;
+                player.y = pastState.y;
+                worldFrame = pastState.worldFrame;
+                updateLasersState();
+                player.vx = 0;
+                player.vy = 0;
+                if (Math.random() < 0.45) {
+                    spawnParticles(player.x + player.size / 2, player.y + player.size / 2, '#b388ff', 2, 2);
+                }
+                if (cloneFrame > 0) cloneFrame--;
+                return;
+            } else {
+                isRewinding = false;
+            }
+
+            worldFrame++;
+            updateLasersState();
+
+            // 2. MOVIMENTO GIOCATORE
+            if (player.dashCooldown > 0) player.dashCooldown--;
+
+            let inputX = touchInput.x;
+            let inputY = touchInput.y;
+            if (keys['ArrowUp'] || keys['KeyW']) inputY -= 1;
+            if (keys['ArrowDown'] || keys['KeyS']) inputY += 1;
+            if (keys['ArrowLeft'] || keys['KeyA']) inputX -= 1;
+            if (keys['ArrowRight'] || keys['KeyD']) inputX += 1;
+
+            const inputLen = Math.hypot(inputX, inputY);
+            if (inputLen > 0.15) {
+                if (inputLen > 1) { inputX /= inputLen; inputY /= inputLen; }
+                player.dirX = inputX / (inputLen > 1 ? 1 : inputLen);
+                player.dirY = inputY / (inputLen > 1 ? 1 : inputLen);
+            } else {
+                inputX = 0; inputY = 0;
+            }
+
+            if (player.isDashing > 0) {
+                player.isDashing--;
+                dashGhosts.push({ x: player.x, y: player.y, alpha: 0.65 });
+            } else {
+                player.vx += inputX * player.accel;
+                player.vy += inputY * player.accel;
+                player.vx *= player.friction;
+                player.vy *= player.friction;
+
+                const currentSpeed = Math.hypot(player.vx, player.vy);
+                if (currentSpeed > player.maxSpeed) {
+                    player.vx = (player.vx / currentSpeed) * player.maxSpeed;
+                    player.vy = (player.vy / currentSpeed) * player.maxSpeed;
+                }
+                if (Math.abs(player.vx) < 0.05) player.vx = 0;
+                if (Math.abs(player.vy) < 0.05) player.vy = 0;
+            }
+
+            if (!isBlocked(player.x + player.vx, player.y)) player.x += player.vx;
+            else player.vx = 0;
+
+            if (!isBlocked(player.x, player.y + player.vy)) player.y += player.vy;
+            else player.vy = 0;
+
+            if (Math.hypot(player.vx, player.vy) > 1.5 && Math.random() < 0.35) {
+                spawnParticles(player.x + player.size / 2, player.y + player.size / 2, '#00f3ff', 1, 0.8);
+            }
+
+            // Controllo impatto con Laser Mortali (se colpisci un laser ti respinge/resetta il tentativo attuale)
+            for (let l of levelData.lasers) {
+                if (l.active && checkCollision(player, l)) {
+                    AudioEngine.hitLaser();
+                    addShake(14);
+                    spawnParticles(player.x + player.size / 2, player.y + player.size / 2, '#ff1744', 35, 5);
+                    spawnShockwave(player.x + player.size / 2, player.y + player.size / 2, '#ff1744', 90);
+                    // Riporta al punto di partenza mantenendo eventuale clone già creato
+                    player.x = levelData.start.x;
+                    player.y = levelData.start.y;
+                    player.vx = 0;
+                    player.vy = 0;
+                    history = [];
+                    return;
+                }
+            }
+
+            history.push({ x: player.x, y: player.y, worldFrame: worldFrame });
+            if (history.length > 650) history.shift();
+
+            // 3. CLONE TEMPORALE
+            let clonePos = null;
+            if (cloneHistory.length > 0) {
+                if (cloneFrame < cloneHistory.length) {
+                    clonePos = cloneHistory[cloneFrame];
+                    cloneFrame++;
+                } else {
+                    clonePos = cloneHistory[cloneHistory.length - 1];
+                }
+            }
+
+            // 4. PULSANTI MULTIPLI E PORTA
+            const wasDoorOpen = levelData.door.open;
+            let allPressed = true;
+
+            for (let btn of levelData.buttons) {
+                const wasBtnPressed = btn.pressed;
+                const pOn = checkCollision(player, { x: btn.x, y: btn.y, w: btn.size, h: btn.size });
+                const cOn = clonePos && checkCollision({ x: clonePos.x, y: clonePos.y, size: player.size }, { x: btn.x, y: btn.y, w: btn.size, h: btn.size });
+                btn.pressed = pOn || cOn;
+
+                if (btn.pressed && !wasBtnPressed) {
+                    spawnParticles(btn.x + btn.size / 2, btn.y + btn.size / 2, '#00e676', 14, 3);
+                }
+                if (!btn.pressed) allPressed = false;
+            }
+
+            levelData.door.open = allPressed;
+            if (levelData.door.open && !wasDoorOpen) {
+                AudioEngine.doorOpen();
+                addShake(5);
+                spawnShockwave(levelData.door.x + levelData.door.w / 2, levelData.door.y + levelData.door.h / 2, '#00e676', 85);
+            }
+
+            // 5. VITTORIA LIVELLO
+            const g = levelData.goal;
+            if (checkCollision(player, { x: g.x, y: g.y, w: g.size, h: g.size })) {
+                AudioEngine.win();
+                addShake(12);
+                spawnParticles(g.x + g.size / 2, g.y + g.size / 2, '#ffd600', 60, 6);
+                spawnShockwave(g.x + g.size / 2, g.y + g.size / 2, '#ffd600', 180);
+
+                if (currentLevelIdx + 1 >= LEVELS.length) {
+                    campaignCompleted = true;
+                } else {
+                    levelCompleted = true;
+                }
+            }
+        }
+
+        // ==========================================
+        // 6. RENDERING
+        // ==========================================
+        function drawEntity(x, y, size, mainColor, isClone = false, vx = 0, vy = 0) {
+            ctx.save();
+            ctx.shadowBlur = 16;
+            ctx.shadowColor = mainColor;
+
+            const stretchX = isClone ? 0 : Math.abs(vx) * 0.6 - Math.abs(vy) * 0.3;
+            const stretchY = isClone ? 0 : Math.abs(vy) * 0.6 - Math.abs(vx) * 0.3;
+            const drawX = x - stretchX / 2;
+            const drawY = y - stretchY / 2;
+            const drawW = size + stretchX;
+            const drawH = size + stretchY;
+
+            if (isRewinding) {
+                ctx.strokeStyle = 'rgba(255, 0, 85, 0.7)';
+                ctx.strokeRect(drawX - 3, drawY, drawW, drawH);
+                ctx.strokeStyle = 'rgba(0, 243, 255, 0.7)';
+                ctx.strokeRect(drawX + 3, drawY, drawW, drawH);
+            }
+
+            ctx.fillStyle = isClone ? 'rgba(213, 0, 249, 0.25)' : 'rgba(0, 243, 255, 0.2)';
+            ctx.strokeStyle = mainColor;
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.roundRect(drawX, drawY, drawW, drawH, 7);
+            ctx.fill();
+            ctx.stroke();
+
+            const pulse = Math.sin(timeTick * 2) * 2;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(x + size / 2, y + size / 2, (size / 5) + pulse * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (!isClone) {
+                ctx.fillStyle = mainColor;
+                ctx.beginPath();
+                ctx.arc(x + size / 2 + player.dirX * 8, y + size / 2 + player.dirY * 8, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        function draw() {
+            ctx.save();
+            if (screenShake > 0) {
+                ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
+            }
+
+            // 1. SFONDO E GRIGLIA
+            ctx.fillStyle = isRewinding ? '#140b24' : '#090d16';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = isRewinding ? 'rgba(179, 136, 255, 0.09)' : 'rgba(0, 243, 255, 0.05)';
+            ctx.lineWidth = 1;
+            const gridSize = 40;
+            for (let x = 0; x < canvas.width; x += gridSize) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += gridSize) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            }
+
+            // 2. ONDE D'URTO
+            for (let s of shockwaves) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+                ctx.strokeStyle = s.color;
+                ctx.globalAlpha = s.alpha;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // 3. TRAGUARDO
+            const g = levelData.goal;
+            ctx.save();
+            ctx.translate(g.x + g.size / 2, g.y + g.size / 2);
+            ctx.rotate(timeTick);
+            ctx.shadowBlur = 22;
+            ctx.shadowColor = '#ffd600';
+            ctx.strokeStyle = '#ffd600';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(-g.size / 2, -g.size / 2, g.size, g.size);
+            ctx.rotate(-timeTick * 2);
+            ctx.strokeStyle = '#ffab00';
+            ctx.strokeRect(-g.size / 3, -g.size / 3, (g.size / 3) * 2, (g.size / 3) * 2);
+            ctx.restore();
+
+            // 4. PULSANTI
+            for (let btn of levelData.buttons) {
+                ctx.save();
+                const btnColor = btn.pressed ? '#00e676' : '#ff1744';
+                ctx.shadowBlur = btn.pressed ? 22 : 10;
+                ctx.shadowColor = btnColor;
+                ctx.fillStyle = btn.pressed ? 'rgba(0, 230, 118, 0.25)' : 'rgba(255, 23, 68, 0.2)';
+                ctx.strokeStyle = btnColor;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.roundRect(btn.x, btn.y, btn.size, btn.size, 8);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(btn.x + btn.size / 2, btn.y + btn.size / 2, btn.pressed ? 8 : 12, 0, Math.PI * 2);
+                ctx.fillStyle = btnColor;
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // 5. LASER CICLICI
+            for (let l of levelData.lasers) {
+                ctx.save();
+                if (l.active) {
+                    ctx.shadowBlur = 18;
+                    ctx.shadowColor = '#ff1744';
+                    ctx.fillStyle = 'rgba(255, 23, 68, 0.7)';
+                    ctx.fillRect(l.x, l.y, l.w, l.h);
+                    ctx.fillStyle = '#ffffff';
+                    if (l.w > l.h) ctx.fillRect(l.x, l.y + l.h / 2 - 1, l.w, 2);
+                    else ctx.fillRect(l.x + l.w / 2 - 1, l.y, 2, l.h);
+                } else {
+                    // Linea tratteggiata di preavviso quando spento
+                    ctx.strokeStyle = 'rgba(255, 23, 68, 0.25)';
+                    ctx.setLineDash([4, 6]);
+                    ctx.strokeRect(l.x, l.y, l.w, l.h);
+                }
+                ctx.restore();
+            }
+
+            // 6. PORTA LASER
+            const d = levelData.door;
+            ctx.save();
+            if (!d.open) {
+                ctx.shadowBlur = 16;
+                ctx.shadowColor = '#ff1744';
+                ctx.fillStyle = 'rgba(255, 23, 68, 0.45)';
+                ctx.fillRect(d.x, d.y, d.w, d.h);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(d.x + d.w / 2 - 1, d.y, 2, d.h);
+            } else {
+                ctx.strokeStyle = 'rgba(0, 230, 118, 0.45)';
+                ctx.setLineDash([5, 5]);
+                ctx.strokeRect(d.x, d.y, d.w, d.h);
+            }
+            ctx.restore();
+
+            // 7. MURI
+            ctx.save();
+            for (let w of levelData.walls) {
+                ctx.fillStyle = '#131a29';
+                ctx.fillRect(w.x, w.y, w.w, w.h);
+                ctx.strokeStyle = '#293855';
+                ctx.lineWidth = 1.5;
+                ctx.strokeRect(w.x, w.y, w.w, w.h);
+            }
+            ctx.restore();
+
+            // 8. SCIA TEMPORALE
+            if (history.length > 1) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(history[0].x + player.size / 2, history[0].y + player.size / 2);
+                for (let i = 1; i < history.length; i += 2) {
+                    ctx.lineTo(history[i].x + player.size / 2, history[i].y + player.size / 2);
+                }
+                ctx.strokeStyle = 'rgba(0, 243, 255, 0.25)';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // 9. PARTICELLE E SCIE DASH
+            for (let ghost of dashGhosts) {
+                ctx.save();
+                ctx.globalAlpha = ghost.alpha * 0.55;
+                ctx.fillStyle = '#00f3ff';
+                ctx.beginPath();
+                ctx.roundRect(ghost.x, ghost.y, player.size, player.size, 7);
+                ctx.fill();
+                ctx.restore();
+            }
+            for (let p of particles) {
+                ctx.save();
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // 10. CLONE E GIOCATORE
+            if (cloneHistory.length > 0) {
+                const cPos = cloneFrame < cloneHistory.length ? cloneHistory[cloneFrame] : cloneHistory[cloneHistory.length - 1];
+                drawEntity(cPos.x, cPos.y, player.size, '#d500f9', true);
+            }
+            drawEntity(player.x, player.y, player.size, player.color, false, player.vx, player.vy);
+
+            // 11. EFFETTO RIAVVOLGIMENTO
+            if (isRewinding) {
+                ctx.fillStyle = 'rgba(179, 136, 255, 0.08)';
+                for (let y = 0; y < canvas.height; y += 4) ctx.fillRect(0, y, canvas.width, 1);
+                ctx.fillStyle = '#d500f9';
+                ctx.font = 'bold 18px monospace';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#d500f9';
+                ctx.fillText('◄◄ REWINDING TIMELINE', 285, 48);
+                ctx.shadowBlur = 0;
+            }
+
+            // 12. HUD IN-GAME (Barre + Suggerimento livello)
+            ctx.save();
+            ctx.fillStyle = 'rgba(19, 26, 41, 0.8)';
+            ctx.strokeStyle = '#293855';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.roundRect(30, 28, 200, 12, 6);
+            ctx.fill();
+            ctx.stroke();
+
+            const energyWidth = (history.length / 650) * 196;
+            if (energyWidth > 0) {
+                const grad = ctx.createLinearGradient(32, 0, 228, 0);
+                grad.addColorStop(0, '#00f3ff');
+                grad.addColorStop(1, '#d500f9');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.roundRect(32, 30, energyWidth, 8, 4);
+                ctx.fill();
+            }
+
+            const dashReady = 1 - (player.dashCooldown / 45);
+            ctx.fillStyle = 'rgba(19, 26, 41, 0.8)';
+            ctx.beginPath();
+            ctx.roundRect(30, 46, 100, 6, 3);
+            ctx.fill();
+            ctx.fillStyle = dashReady >= 1 ? '#00f3ff' : '#4a628a';
+            ctx.beginPath();
+            ctx.roundRect(30, 46, 100 * dashReady, 6, 3);
+            ctx.fill();
+
+            // Titolo e indizio del livello in basso
+            ctx.fillStyle = 'rgba(201, 209, 217, 0.75)';
+            ctx.font = '13px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(${levelData.name} — ${levelData.hint}, canvas.width / 2, canvas.height - 28);
+            ctx.restore();
+
+            // 13. OVERLAY VITTORIA LIVELLO / FINE CAMPAGNA
+            if (levelCompleted || campaignCompleted) {
+                ctx.fillStyle = 'rgba(9, 13, 22, 0.88)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.save();
+                ctx.textAlign = 'center';
+
+                if (campaignCompleted) {
+                    ctx.shadowBlur = 25;
+                    ctx.shadowColor = '#ffd600';
+                    ctx.fillStyle = '#ffd600';
+                    ctx.font = 'bold 40px sans-serif';
+                    ctx.fillText('SIGNORE DEL TEMPO!', canvas.width / 2, 205);
+                    ctx.shadowBlur = 0;
+                    ctx.fillStyle = '#c9d1d9';
+                    ctx.font = '18px sans-serif';
+                    ctx.fillText('Hai risolto tutti e 5 i paradossi temporali!', canvas.width / 2, 250);
+                    ctx.fillStyle = '#00f3ff';
+                    ctx.font = 'bold 16px sans-serif';
+                    ctx.fillText('Tocca lo schermo o premi INVIO per ricominciare la sfida', canvas.width / 2, 295);
+                } else {
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = '#00e676';
+                    ctx.fillStyle = '#00e676';
+                    ctx.font = 'bold 36px sans-serif';
+                    ctx.fillText('PARADOSSO RISOLTO!', canvas.width / 2, 210);
+                    ctx.shadowBlur = 0;
+                    ctx.fillStyle = '#c9d1d9';
+                    ctx.font = '18px sans-serif';
+                    ctx.fillText(Prossimo: ${LEVELS[currentLevelIdx + 1].name}, canvas.width / 2, 255);
+                    ctx.fillStyle = '#00f3ff';
+                    ctx.font = 'bold 16px sans-serif';
+                    ctx.fillText('Tocca lo schermo o premi INVIO per continuare', canvas.width / 2, 295);
+                }
+                ctx.restore();
+            }
+
+            ctx.restore();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Avvia dal Livello 1
+        loadLevel(0);
+        gameLoop();
+    </script>
+</body>
+</html>
